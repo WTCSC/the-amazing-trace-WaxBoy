@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 import time
 import os
+import subprocess
 
 def execute_traceroute(destination):
     """
@@ -21,6 +22,24 @@ def execute_traceroute(destination):
 
     # Remove this line once you implement the function,
     # and don't forget to *return* the output
+
+    process = subprocess.run(['traceroute', '-I', 'google.com'], text=True, capture_output=True)
+
+    out = process.stdout.split('\n')
+
+    for line in out[1:]:
+        
+
+        index = line[0:2].strip()
+        
+        segments = [index]
+
+        for seg in line[4:].split(' '):
+        
+            segments.append(seg) 
+        print(segments)
+            
+
     pass
 
 def parse_traceroute(traceroute_output):
@@ -160,10 +179,11 @@ if __name__ == "__main__":
         "amazon.com",
         "bbc.co.uk"  # International site
     ]
-
-    for dest in destinations:
+    execute_traceroute('h')
+    """for dest in destinations:
         df, plot_path = visualize_traceroute(dest, num_traces=3, interval=5)
         print(f"\nAverage RTT by hop for {dest}:")
         avg_by_hop = df.groupby('hop')['avg_rtt'].mean()
         print(avg_by_hop)
         print("\n" + "-"*50 + "\n")
+ """
