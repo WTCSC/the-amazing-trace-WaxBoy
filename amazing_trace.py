@@ -4,6 +4,8 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 import time
 import os
+import subprocess
+import re
 
 def execute_traceroute(destination):
     """
@@ -21,9 +23,17 @@ def execute_traceroute(destination):
 
     # Remove this line once you implement the function,
     # and don't forget to *return* the output
-    pass
 
-def parse_traceroute(traceroute_output):
+    process = subprocess.run(['traceroute', '-I', 'google.com'], text=True, capture_output=True)
+    # 
+    output = process.stdout.split('\n')
+    
+    # Initial request preface
+    parse_traceroute(output)
+            
+
+
+def parse_traceroute(output):
     """
     Parses the raw traceroute output into a structured format.
 
@@ -67,6 +77,38 @@ def parse_traceroute(traceroute_output):
 
     # Remove this line once you implement the function,
     # and don't forget to *return* the output
+
+
+    request = output[0]
+
+    # Extract destination hostname
+    match = re.search(r'traceroute to (\S+)', request)
+    if match:
+        dest_hostname = match.group(1)
+
+    # Extract destination IP
+    match = re.search(r'\((\d{1,3}\.){3}\d{1,3}\)', request)
+    if match:
+        dest_ip = match.group()[1:-1]    
+
+    if dest_hostname == dest_ip:
+        dest_hostname = None # Set hostnome to none if the same as IP (redundant)
+        
+    print(dest_hostname, dest_ip)
+
+    for line in output[1:-1]:
+        line = line.strip()
+
+        # Find hop index
+        match = re.search(r'^\d{1,2}', line)
+        if match:
+            hop = match.group()
+        
+        # Init segments with hop index
+        segments = {'hop': hop}
+    
+
+        print(segments)
     pass
 
 # ============================================================================ #
@@ -160,10 +202,11 @@ if __name__ == "__main__":
         "amazon.com",
         "bbc.co.uk"  # International site
     ]
-
-    for dest in destinations:
+    execute_traceroute('h')
+    """for dest in destinations:
         df, plot_path = visualize_traceroute(dest, num_traces=3, interval=5)
         print(f"\nAverage RTT by hop for {dest}:")
         avg_by_hop = df.groupby('hop')['avg_rtt'].mean()
         print(avg_by_hop)
         print("\n" + "-"*50 + "\n")
+ """
