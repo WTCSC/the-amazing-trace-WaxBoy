@@ -17,19 +17,15 @@ def execute_traceroute(destination):
     Returns:
         str: The raw output from the traceroute command
     """
-    # Your code here
-    # Hint: Use the subprocess module to run the traceroute command
-    # Make sure to handle potential errors
 
-    # Remove this line once you implement the function,
-    # and don't forget to *return* the output
-
-    process = subprocess.run(['traceroute', '-I', 'google.com'], text=True, capture_output=True)
-    # 
-    output = process.stdout.split('\n')
+    # Run traceroute with -I for each of the destinations
+    process = subprocess.run(['traceroute', '-I', f"{destination}"], text=True, capture_output=True)
     
-    # Initial request preface
-    parse_traceroute(output)
+    output = process.stdout.split('\n')
+
+    print(output)
+    return output
+
             
 
 
@@ -71,45 +67,85 @@ def parse_traceroute(output):
         ]
     ```
     """
-    # Your code here
-    # Hint: Use regular expressions to extract the relevant information
-    # Handle timeouts (asterisks) appropriately
 
-    # Remove this line once you implement the function,
-    # and don't forget to *return* the output
+    ## Extract ip and hostname of requested destination
+            
+    request = output[0] # Details of traceroute request
+    dest_ip = None
+    dest_hostname = None # Initiate variables
 
-
-    request = output[0]
-
-    # Extract destination hostname
+    # Extract destination hostname by looking for 'traceroute to'
     match = re.search(r'traceroute to (\S+)', request)
     if match:
         dest_hostname = match.group(1)
 
-    # Extract destination IP
+    # Extract destination IP by looking for enclosed ip structure (8.8.8.8)
     match = re.search(r'\((\d{1,3}\.){3}\d{1,3}\)', request)
     if match:
-        dest_ip = match.group()[1:-1]    
+        dest_ip = match.group()[1:-1] # Return without parenthesis
 
+    # Set hostnome to none if the same as IP (redundant)
     if dest_hostname == dest_ip:
-        dest_hostname = None # Set hostnome to none if the same as IP (redundant)
+        dest_hostname = None 
         
-    print(dest_hostname, dest_ip)
+    # Init data table output
+    data = []
 
     for line in output[1:-1]:
-        line = line.strip()
+        line = line.strip() # Strip
+        
+        # Init all segments
+        hop = None
+        ip = None
+        hostname = None
+        rtt = [None, None, None]
+
 
         # Find hop index
         match = re.search(r'^\d{1,2}', line)
         if match:
             hop = match.group()
         
-        # Init segments with hop index
-        segments = {'hop': hop}
-    
 
-        print(segments)
-    pass
+
+        
+        #Find round trip time (or '*'s)
+        match = re.findall(r'\d\.\d{3} ms|\*', line)
+        if match:
+            if len(match) == 3:    
+                for i in range(3):
+                    entry = re.sub(r'[^0-9.*]', '', match[i])
+                    if entry == '*':
+                        rtt[i] = None
+                    else:
+                        rtt[i] = float(entry)
+
+        match = re.search(r'\((\d{1,3}\.){3}\d{1,3}\)', line)
+        if match:
+            ip = match.group()
+            ip = re.sub(r'[()]', '', ip)
+
+
+        match = re.search(r'\S+ \((\d{1,3}\.){3}\d{1,3}\)', line)
+        if match:
+            hostname = match.group().split(' ')[0]   
+
+        if hostname == ip:
+            hostname = None
+        
+
+        # Init segments with hop index
+        segments = {
+            'hop': hop,
+            'ip': ip,
+            'hostname': hostname,
+            'rtt': rtt
+            }
+        
+
+        data.append(segments)
+    print(data)
+    return data
 
 # ============================================================================ #
 #                    DO NOT MODIFY THE CODE BELOW THIS LINE                    #
@@ -202,11 +238,9 @@ if __name__ == "__main__":
         "amazon.com",
         "bbc.co.uk"  # International site
     ]
-    execute_traceroute('h')
-    """for dest in destinations:
+    for dest in destinations:
         df, plot_path = visualize_traceroute(dest, num_traces=3, interval=5)
         print(f"\nAverage RTT by hop for {dest}:")
         avg_by_hop = df.groupby('hop')['avg_rtt'].mean()
         print(avg_by_hop)
         print("\n" + "-"*50 + "\n")
- """
