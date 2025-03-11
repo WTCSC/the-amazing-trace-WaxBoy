@@ -21,9 +21,9 @@ def execute_traceroute(destination):
     # Run traceroute with -I for each of the destinations
     process = subprocess.run(['traceroute', '-I', f"{destination}"], text=True, capture_output=True)
     
-    output = process.stdout.split('\n')
+    output = process.stdout
 
-    print(output)
+
     return output
 
             
@@ -68,30 +68,43 @@ def parse_traceroute(output):
     ```
     """
 
-    ## Extract ip and hostname of requested destination
-            
-    request = output[0] # Details of traceroute request
-    dest_ip = None
-    dest_hostname = None # Initiate variables
+    output = output.strip().split('\n')
 
-    # Extract destination hostname by looking for 'traceroute to'
-    match = re.search(r'traceroute to (\S+)', request)
-    if match:
-        dest_hostname = match.group(1)
+        ## Extract ip and hostname of requested destination
+    if len(output) >= 2:
+        
+        dest_ip = None
+        dest_hostname = None # Initiate variables
+        
+        request = output[1] # Details of traceroute request
 
-    # Extract destination IP by looking for enclosed ip structure (8.8.8.8)
-    match = re.search(r'\((\d{1,3}\.){3}\d{1,3}\)', request)
-    if match:
-        dest_ip = match.group()[1:-1] # Return without parenthesis
+        # Extract destination hostname by looking for 'traceroute to'
+        match = re.search(r'traceroute to (\S+)', request)
+        if match:
+            dest_hostname = match.group(1)
 
-    # Set hostnome to none if the same as IP (redundant)
-    if dest_hostname == dest_ip:
-        dest_hostname = None 
+        # Extract destination IP by looking for enclosed ip structure (8.8.8.8)
+        match = re.search(r'\((\d{1,3}\.){3}\d{1,3}\)', request)
+        if match:
+            dest_ip = match.group()[1:-1] # Return without parenthesis
+
+        # Set hostnome to none if the same as IP (redundant)
+        if dest_hostname == dest_ip:
+            dest_hostname = None 
+
+
+        # typical output will have 3 lines discluded
+        if len(output) >= 3:
+            output = output[1:]
+    
+        
+
+        
         
     # Init data table output
     data = []
 
-    for line in output[1:-1]:
+    for line in output:
         line = line.strip() # Strip
         
         # Init all segments
@@ -101,16 +114,16 @@ def parse_traceroute(output):
         rtt = [None, None, None]
 
 
-        # Find hop index
+        # Find hop index as integer
         match = re.search(r'^\d{1,2}', line)
         if match:
-            hop = match.group()
+            hop = int(match.group())
         
 
 
         
         #Find round trip time (or '*'s)
-        match = re.findall(r'\d\.\d{3} ms|\*', line)
+        match = re.findall(r'\d+\.\d{3} ms|\*', line)
         if match:
             if len(match) == 3:    
                 for i in range(3):
@@ -120,16 +133,20 @@ def parse_traceroute(output):
                     else:
                         rtt[i] = float(entry)
 
-        match = re.search(r'\((\d{1,3}\.){3}\d{1,3}\)', line)
+
+
+        # Grab IP and hostname if applicable.
+        match = re.search(r'\S+ ?\((\d{1,3}\.){3}\d{1,3}\)', line) 
         if match:
-            ip = match.group()
-            ip = re.sub(r'[()]', '', ip)
+            hostname, ip = match.group().split(' ')
+            ip = ip[1:-1] # Remove parenthesis
+        else:
+            # If there is no match with a hostname, just look for an IP
+            match = re.search(r'(\d{1,3}\.){3}\d{1,3}', line)
+            if match:
+                ip = match.group()
 
-
-        match = re.search(r'\S+ \((\d{1,3}\.){3}\d{1,3}\)', line)
-        if match:
-            hostname = match.group().split(' ')[0]   
-
+        #In case ip and hostname are the same, set hostname to none (to remove redundancy)
         if hostname == ip:
             hostname = None
         
@@ -142,9 +159,10 @@ def parse_traceroute(output):
             'rtt': rtt
             }
         
+        # if NO data exists for the line, do not append a new dictionary of values
+        if hop or ip or hostname or not None in rtt:
+            data.append(segments)
 
-        data.append(segments)
-    print(data)
     return data
 
 # ============================================================================ #
