@@ -1,21 +1,21 @@
 [![Open in Codespaces](https://classroom.github.com/assets/launch-codespace-2972f46106e565e64193e422d61a12cf1da4916b45550586e14ef0a7c637dd04.svg)](https://classroom.github.com/open-in-codespaces?assignment_repo_id=18563909)
 # The Amazing Trace
 
-The amazing trace is made to calculate and show average round trip time for each hop of a traceroute to 1 or many destinations.
+Calculates average round trip time for each hop of a traceroute to a list of destinations.
 
 
 ## Functionality
 
-This script utilizes the subprocess module to call a traceroute to a set of destinations (IP's or hostnames)
+Utilizes the subprocess module to traceroute to a set of destinations (IP's or hostnames), tracking details about each and every stop (hop) the signal has to go through.
 
-#### The raw output from the call is parsed using regex in order to extract the following data:
+#### The raw output from the stdout is parsed using regex to extract the following information:
 
 * Hop Number
 * IP Address
 * Hostname (None if same as IP)
 * Round Trip Time (RTT) Table
 
-#### The data is organized as shown below and then added to a list containing the data of each line:
+#### The data is then organized like so:
 ```
 {
     'hop': 1,
@@ -25,9 +25,10 @@ This script utilizes the subprocess module to call a traceroute to a set of dest
 }
 ```
 
-### Finally:
+### Data Output:
 The test is run 3 times for each destination, each trace being color coded and displayed on a line graph. 
 
+![Example Graph](Graph.png)
 ___
 
 Lastly, the average rtt is calculated across all 3 traces and displayed in a text table like so:
@@ -67,13 +68,13 @@ Lastly, the average rtt is calculated across all 3 traces and displayed in a tex
 
 ### To Run
 
-The script is run just by calling 'amazing_trace.py' using python3:
+The script is run by calling 'amazing_trace.py' using python3:
 
 `python3 amazing_trace.py`
 
 ### To Change the Target Destinations:
-Look at the bottom of the script, directly under where it says `if __name__ == "__main__"`:
+Inside the file `amazing_trace.py`, directly underneath the line `if __name__ == "__main__"`:
 
-Change the destination list with as many hostnames or IP's as you would like 
+The destination list 'destinations'  to remove or add any website domain names or IP's
 
-**(Default destinations list is set to`["google.com", "amazon.com", "bbc.co.uk"]`)**
+**(Default list: `destinations = ["google.com", "amazon.com", "bbc.co.uk"]`)**
