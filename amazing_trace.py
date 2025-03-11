@@ -4,6 +4,8 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 import time
 import os
+import subprocess
+import re
 
 def execute_traceroute(destination):
     """
@@ -15,15 +17,19 @@ def execute_traceroute(destination):
     Returns:
         str: The raw output from the traceroute command
     """
-    # Your code here
-    # Hint: Use the subprocess module to run the traceroute command
-    # Make sure to handle potential errors
 
-    # Remove this line once you implement the function,
-    # and don't forget to *return* the output
-    pass
+    # Run traceroute with -I for each of the destinations
+    process = subprocess.run(['traceroute', '-I', f"{destination}"], text=True, capture_output=True)
+    
+    output = process.stdout
 
-def parse_traceroute(traceroute_output):
+
+    return output
+
+            
+
+
+def parse_traceroute(output):
     """
     Parses the raw traceroute output into a structured format.
 
@@ -61,13 +67,103 @@ def parse_traceroute(traceroute_output):
         ]
     ```
     """
-    # Your code here
-    # Hint: Use regular expressions to extract the relevant information
-    # Handle timeouts (asterisks) appropriately
 
-    # Remove this line once you implement the function,
-    # and don't forget to *return* the output
-    pass
+    output = output.strip().split('\n')
+
+        ## Extract ip and hostname of requested destination
+    if len(output) >= 2:
+        
+        dest_ip = None
+        dest_hostname = None # Initiate variables
+        
+        request = output[1] # Details of traceroute request
+
+        # Extract destination hostname by looking for 'traceroute to'
+        match = re.search(r'traceroute to (\S+)', request)
+        if match:
+            dest_hostname = match.group(1)
+
+        # Extract destination IP by looking for enclosed ip structure (8.8.8.8)
+        match = re.search(r'\((\d{1,3}\.){3}\d{1,3}\)', request)
+        if match:
+            dest_ip = match.group()[1:-1] # Return without parenthesis
+
+        # Set hostnome to none if the same as IP (redundant)
+        if dest_hostname == dest_ip:
+            dest_hostname = None 
+
+
+        # typical output will have 3 lines discluded
+        if len(output) >= 3:
+            output = output[1:]
+    
+        
+
+        
+        
+    # Init data table output
+    data = []
+
+    for line in output:
+        line = line.strip() # Strip
+        
+        # Init all segments
+        hop = None
+        ip = None
+        hostname = None
+        rtt = [None, None, None]
+
+
+        # Find hop index as integer
+        match = re.search(r'^\d{1,2}', line)
+        if match:
+            hop = int(match.group())
+        
+
+
+        
+        #Find round trip time (or '*'s)
+        match = re.findall(r'\d+\.\d{3} ms|\*', line)
+        if match:
+            if len(match) == 3:    
+                for i in range(3):
+                    entry = re.sub(r'[^0-9.*]', '', match[i])
+                    if entry == '*':
+                        rtt[i] = None
+                    else:
+                        rtt[i] = float(entry)
+
+
+
+        # Grab IP and hostname if applicable.
+        match = re.search(r'\S+ ?\((\d{1,3}\.){3}\d{1,3}\)', line) 
+        if match:
+            hostname, ip = match.group().split(' ')
+            ip = ip[1:-1] # Remove parenthesis
+        else:
+            # If there is no match with a hostname, just look for an IP
+            match = re.search(r'(\d{1,3}\.){3}\d{1,3}', line)
+            if match:
+                ip = match.group()
+
+        #In case ip and hostname are the same, set hostname to none (to remove redundancy)
+        if hostname == ip:
+            hostname = None
+        
+
+        # Init segments with hop index
+        segments = {
+            'hop': hop,
+            'ip': ip,
+            'hostname': hostname,
+            'rtt': rtt
+            }
+        
+        # if NO data exists for the line, do not append a new dictionary of values
+        if hop or ip or hostname or not None in rtt:
+            data.append(segments)
+
+    return data
 
 # ============================================================================ #
 #                    DO NOT MODIFY THE CODE BELOW THIS LINE                    #
@@ -160,7 +256,6 @@ if __name__ == "__main__":
         "amazon.com",
         "bbc.co.uk"  # International site
     ]
-
     for dest in destinations:
         df, plot_path = visualize_traceroute(dest, num_traces=3, interval=5)
         print(f"\nAverage RTT by hop for {dest}:")
